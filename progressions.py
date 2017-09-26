@@ -196,7 +196,7 @@ def concept(name, expr=None, reduction=None):
     args = "()"
     if expr != None:
         args = "(" + ",".join(expr) + ")"
-    return name.upper() + args + ('->' + reduction) if reduction != None else ''
+    return name.upper() + args + (('->' + reduction) if reduction != None else '')
 
 # Takes some expression x
 # and the _rest_ of the expressions on the board, M.
