@@ -16,7 +16,6 @@ def print_graph(G):
 # Calculate the probability of brute-forcing the given path.
 # (i.e. by randomly choosing an out-edge at each node).
 def bruteforce_prob_path(G, path):
-    if len(path) == 2: return 1.0 / G.out_degree(path[0])
     p = 1.0
 
     mid = path[:-1]
@@ -31,8 +30,8 @@ def bruteforce_prob_path(G, path):
 # Calculate the probability of brute-forcing
 # from start_node and ending at end_node:
 def bruteforce_prob(G, start_node, end_node):
-
     p = 0.0
+
     # There can be multiple simple paths leading to the end node.
     # The total probability is the sum of individual path probabilities.
     # > This uses nx.all_simple_paths's generator version for efficiency.

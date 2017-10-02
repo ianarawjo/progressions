@@ -20,14 +20,6 @@ def group_data(lst, key=(lambda x: x), sorter=None):
     if sorter: vals = sorter(vals)
     return [[y for y in lst if key(y) == v] for v in vals]
 
-# Preset starting values for testing.
-# start_states = [
-#     { 'board':[ "_ == _", "star" ],
-#       'toolbox':[ "star", "rect" ] },
-#     { 'board':[ "xx", "star" ],
-#       'toolbox':[ "rect" ] }
-# ]
-
 # Generate random sample of
 # starting states of the game:
 start_states = []
@@ -36,10 +28,10 @@ all_valid_exprs = sg.gen_all_valid_exprs()
 
 # Generate a list of random (state, graph) pairs,
 # representing possible levels and their traversals.
-random_states = sg.gen_random_states( all_valid_exprs, 1, 40 ) + \
-                sg.gen_random_states( all_valid_exprs, 2, 40 ) + \
-                sg.gen_random_states( all_valid_exprs, 3, 60 )
-                # sg.gen_random_states( all_valid_exprs, 4, 80 )
+random_states = sg.gen_random_states( all_valid_exprs, 1, 60 ) + \
+                sg.gen_random_states( all_valid_exprs, 2, 60 ) + \
+                sg.gen_random_states( all_valid_exprs, 3, 100 ) + \
+                sg.gen_random_states( all_valid_exprs, 4, 100 )
                 #  sg.gen_random_states( all_valid_exprs, 5, 60 )
 
 # Convert to levels
@@ -48,24 +40,9 @@ progression = [Level(state) for state, _ in random_states]
 # Compute state graph and goals for each level:
 for lvl in progression:
     lvl.compute_state_graph()
-    lvl.pick_goal(lambda s: (not has_bool(s) or not has_val(s)))
-
-# Remove invalid levels.
-# TODO: Figure out why some levels have to trace_concepts...
-# for lvl in progression:
-#     if lvl.invalid == True:
-#         print(lvl)
-#         # print_graph(lvl.G)
-#         # break
-# exit(0)
+    lvl.pick_goal(lambda s: (not has_bool(s) or not has_val(s))) # e.g. can't be A, true
 
 progression = filter(lambda lvl: lvl.invalid == False, progression)
-
-# for lvl in progression:
-#     print(lvl)
-    # print_graph(lvl.G)
-    # break
-# exit(0)
 
 # Sort levels by (decreasing) likelihood of brute forcing the level:
 progression.sort(key=lambda lvl: (2.0 - lvl.bfp))
@@ -132,9 +109,41 @@ def partial_ordering(progression, conceptsToTeach):
 # 'teach' Boolean reductions:
 buckets = partial_ordering(progression, ('EQ->true', 'EQ->false'))
 
+# e.g. A == A, true ; B == B, true ...
+def similar_levels(l1, l2):
+    if  l1.trace_concepts == l2.trace_concepts and \
+        l1.G.number_of_edges() == l2.G.number_of_edges() and \
+        l1.G.number_of_nodes() == l2.G.number_of_nodes():
+        return True
+    else:
+        return False
+def pairwise_filter(compareFunc, lst):
+    i = 0
+    arr = lst[:]
+    while i < len(arr) - 1:
+        l1 = arr[i]
+
+        # For this item, take out all following
+        # 'similar' items.
+        next_arrs = arr[i+1:]
+        unique = []
+        for l2 in next_arrs:
+            if not compareFunc(l1, l2):
+                unique.append(l2)
+
+        arr[i+1:] = unique
+        i += 1
+    return arr
+
+# Cut levels which 'look the same' (e.g. {A == B} vs {B == A})
+buckets = [(b[0], pairwise_filter(similar_levels, b[1])) for b in buckets]
+
+# Cut levels with more than 2 goals
+buckets = [(b[0], list(filter(lambda lvl: len(lvl.goal) < 3, b[1]))) for b in buckets]
+
 # Total 'complexity' = likelihood of solving * product( concept-relative-BFP's ) / length_of_optimal_trace
 def lvl_complexity(lvl):
-    return 2.0 - lvl.bfp * sg.concepts_relative_BFP(lvl, b[0]) / len(list(lvl.trace_concepts)[0])
+    return 2.0 - lvl.bfp * sg.concepts_relative_BFP(lvl, b[0]) / lvl.G.number_of_edges()
 
 # Sort levels in each bucket by complexity:
 buckets_by_rel_BFP = [(b[0], sorted(b[1], key=lvl_complexity)) for b in buckets]

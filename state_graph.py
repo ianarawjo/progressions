@@ -179,17 +179,17 @@ def concept_relative_BFP(lvl, indiv_concept):
     # as a 'move' in this level, and take the state it goes to.
     G = lvl.G
     start_state = Multiset(lvl.state['board'])
-    cs = dict(nx.get_edge_attributes(G, 'concept'))
+    edges_with_concepts = dict(nx.get_edge_attributes(G, 'concept'))
     BFPs = []
-    for from_node, to_node in cs:
-        val = simplify( cs[from_node, to_node] )
+    for from_node, to_node in edges_with_concepts:
+        val = simplify( edges_with_concepts[from_node, to_node] )
         if indiv_concept == val:
             BFPs.append(bruteforce_prob(G, start_state, to_node))
 
     # Now return the *highest* BFP
     # (e.g. concept 'A' could appear in the first edge of the graph with BFP=1.0,
     # and then appear later with BFP=0.0001, but we're ignoring the harder paths for now.)
-    return max(BFPs)
+    return sum(BFPs) / len(BFPs)
 
 def concepts_relative_BFP(lvl, concepts):
     bfps = list(map(lambda c:concept_relative_BFP(lvl, c), concepts))
